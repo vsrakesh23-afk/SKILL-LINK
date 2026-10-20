@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillLink - System Audit Logs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-slate-50 min-h-screen py-12 px-6 flex justify-center">
+
+    <div class="max-w-4xl w-full space-y-6" x-data="auditLogViewer()">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900">Immutable Audit Logs</h2>
+                <p class="text-xs text-slate-500 mt-1">System-wide governance trail tracking escrow and financial operations.</p>
+            </div>
+            <button @click="loadLogs" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-medium transition">
+                Refresh Logs
+            </button>
+        </div>
+
+        <!-- Audit Logs Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-100 text-slate-600 text-xs uppercase font-semibold">
+                        <th class="p-3">Timestamp</th>
+                        <th class="p-3">Table</th>
+                        <th class="p-3">Operation</th>
+                        <th class="p-3">Record ID</th>
+                        <th class="p-3">Details</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 text-sm">
+                    <template x-for="log in logs" :key="log.log_id">
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 text-xs text-slate-500 font-mono" x-text="new Date(log.performed_at).toLocaleString()"></td>
+                            <td class="p-3 font-medium text-slate-800" x-text="log.table_name"></td>
+                            <td class="p-3">
+                                <span class="px-2 py-1 text-xs rounded font-semibold"
+                                      :class="log.operation === 'INSERT' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
+                                      x-text="log.operation"></span>
+                            </td>
+                            <td class="p-3 font-mono text-xs text-slate-600 truncate max-w-[120px]" x-text="log.record_id"></td>
+                            <td class="p-3 text-slate-600 text-xs" x-text="log.details"></td>
+                        </tr>
+                    </template>
+                    <template x-if="logs.length === 0">
+                        <tr>
+                            <td colspan="5" class="p-6 text-center text-slate-400 text-xs">No audit logs found or click refresh to load data.</td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase } from '../../supabase-client.js';
+
+        window.auditLogViewer = function() {
+            return {
+                logs: [],
+
+                async loadLogs() {
+                    const { data, error } = await supabase
+                        .from('audit_log')
+                        .select('*')
+                        .order('performed_at', { ascending: false });
+
+                    if (error) {
+                        alert('Error fetching audit logs: ' + error.message);
+                    } else {
+                        this.logs = data || [];
+                    }
+                },
+
+                init() {
+                    this.loadLogs();
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillLink - Admin Governance Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-slate-50 min-h-screen py-10 px-6" x-data="adminDashboard()">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">Admin Governance Portal</h1>
+                <p class="text-xs text-slate-500 mt-1">Manage worker verifications, handle escrow disputes, and inspect audit logs.</p>
+            </div>
+            <div class="flex gap-2">
+                <button @click="activeTab = 'verifications'" :class="activeTab === 'verifications' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'" class="px-4 py-2 rounded-lg text-xs font-medium transition">
+                    Worker KYC Queue
+                </button>
+                <button @click="activeTab = 'disputes'" :class="activeTab === 'disputes' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'" class="px-4 py-2 rounded-lg text-xs font-medium transition">
+                    Dispute Arbitration
+                </button>
+                <button @click="activeTab = 'audit'" :class="activeTab === 'audit' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'" class="px-4 py-2 rounded-lg text-xs font-medium transition">
+                    Audit Logs
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab 1: Worker KYC Verifications (Member 1 Domain) -->
+        <div x-show="activeTab === 'verifications'" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+            <h2 class="text-lg font-bold text-slate-800">Pending Worker Verifications</h2>
+            <div class="space-y-3">
+                <template x-for="worker in pendingWorkers" :key="worker.worker_id">
+                    <div class="p-4 border border-slate-200 rounded-lg flex justify-between items-center">
+                        <div>
+                            <p class="text-sm font-bold text-slate-900" x-text="worker.bio"></p>
+                            <p class="text-xs text-slate-500 font-mono">ID: <span x-text="worker.worker_id"></span> | Tier: <span x-text="worker.verification_tier"></span></p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button @click="updateVerification(worker.worker_id, 'VERIFIED')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-medium">Approve</button>
+                            <button @click="updateVerification(worker.worker_id, 'REJECTED')" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded text-xs font-medium">Reject</button>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="pendingWorkers.length === 0">
+                    <p class="text-xs text-slate-400 text-center py-4">No pending worker verifications.</p>
+                </template>
+            </div>
+        </div>
+
+        <!-- Tab 2: Dispute Arbitration (Member 3 Domain) -->
+        <div x-show="activeTab === 'disputes'" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+            <h2 class="text-lg font-bold text-slate-800">Escrow Disputes Under Review</h2>
+            <div class="space-y-3">
+                <template x-for="dispute in disputedJobs" :key="dispute.ledger_id">
+                    <div class="p-4 border border-rose-200 bg-rose-50/30 rounded-lg flex justify-between items-center">
+                        <div>
+                            <p class="text-sm font-bold text-slate-900">Job ID: <span class="font-mono text-xs" x-text="dispute.job_id"></span></p>
+                            <p class="text-xs text-slate-700 mt-1"><strong>Reason:</strong> <span x-text="dispute.dispute_reason"></span></p>
+                            <p class="text-xs text-amber-600 font-semibold mt-1">Locked Amount: ₹<span x-text="dispute.held_amount"></span></p>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <button @click="resolveDispute(dispute.job_id, 'REFUND')" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded text-xs font-medium">Refund Client</button>
+                            <button @click="resolveDispute(dispute.job_id, 'RELEASE')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-medium">Release to Worker</button>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="disputedJobs.length === 0">
+                    <p class="text-xs text-slate-400 text-center py-4">No active disputes requiring arbitration.</p>
+                </template>
+            </div>
+        </div>
+
+        <!-- Tab 3: Immutable Audit Logs (Member 3 / Governance Domain) -->
+        <div x-show="activeTab === 'audit'" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+            <h2 class="text-lg font-bold text-slate-800">System Audit Trail</h2>
+            <div class="overflow-hidden border border-slate-200 rounded-lg">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-600 text-xs uppercase font-semibold">
+                            <th class="p-3">Timestamp</th>
+                            <th class="p-3">Table</th>
+                            <th class="p-3">Operation</th>
+                            <th class="p-3">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 text-xs">
+                        <template x-for="log in auditLogs" :key="log.log_id">
+                            <tr>
+                                <td class="p-3 text-slate-500 font-mono" x-text="new Date(log.performed_at).toLocaleString()"></td>
+                                <td class="p-3 font-medium text-slate-800" x-text="log.table_name"></td>
+                                <td class="p-3"><span class="px-2 py-0.5 rounded font-semibold" :class="log.operation === 'INSERT' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'" x-text="log.operation"></span></td>
+                                <td class="p-3 text-slate-600" x-text="log.details"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase } from '../../supabase-client.js';
+
+        window.adminDashboard = function() {
+            return {
+                activeTab: 'verifications',
+                pendingWorkers: [],
+                disputedJobs: [],
+                auditLogs: [],
+
+                async loadData() {
+                    // Load workers with BASIC tier
+                    const { data: workers } = await supabase.from('workers').select('*').eq('verification_tier', 'BASIC');
+                    this.pendingWorkers = workers || [];
+
+                    // Load disputed escrow ledgers
+                    const { data: disputes } = await supabase.from('escrow_ledger').select('*').eq('status', 'DISPUTED');
+                    this.disputedJobs = disputes || [];
+
+                    // Load audit logs
+                    const { data: logs } = await supabase.from('audit_log').select('*').order('performed_at', { ascending: false });
+                    this.auditLogs = logs || [];
+                },
+
+                async updateVerification(workerId, tier) {
+                    const { error } = await supabase.from('workers').update({ verification_tier: tier }).eq('worker_id', workerId);
+                    if (error) alert('Error: ' + error.message);
+                    else { alert('Worker status updated to ' + tier); this.loadData(); }
+                },
+
+                async resolveDispute(jobId, decision) {
+                    const newStatus = decision === 'REFUND' ? 'REFUNDED' : 'RELEASED';
+                    const { error } = await supabase.from('escrow_ledger').update({ status: newStatus }).eq('job_id', jobId);
+                    if (error) alert('Error resolving dispute: ' + error.message);
+                    else { alert('Dispute resolved successfully as ' + newStatus); this.loadData(); }
+                },
+
+                init() {
+                    this.loadData();
+                }
+            }
+        }
+    </script>
+</body>
+</html>

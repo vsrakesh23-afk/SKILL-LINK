@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillLink - Submit Review & Trust Score</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-slate-50 flex items-center justify-center min-h-screen py-12">
+
+    <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 max-w-lg w-full space-y-6" 
+         x-data="reviewManager()">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-900">Rate & Review Worker</h2>
+            <p class="text-xs text-slate-500 mt-1">Your review directly updates the worker's automated Trust Score[cite: 3].</p>
+        </div>
+
+        <form @submit.prevent="submitReview" class="space-y-4">
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Job ID</label>
+                <input type="text" x-model="jobId" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono" placeholder="Paste job UUID">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Worker ID</label>
+                <input type="text" x-model="workerId" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono" placeholder="Paste worker UUID">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Client ID (You)</label>
+                <input type="text" x-model="clientId" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono" placeholder="Paste your client UUID">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Rating (1 to 5 Stars)</label>
+                <select x-model="rating" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white">
+                    <option value="5">⭐⭐⭐⭐⭐ (5 - Excellent)</option>
+                    <option value="4">⭐⭐⭐⭐ (4 - Good)</option>
+                    <option value="3">⭐⭐⭐ (3 - Average)</option>
+                    <option value="2">⭐⭐ (2 - Poor)</option>
+                    <option value="1">⭐ (1 - Terrible)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Review Comment</label>
+                <textarea x-model="comment" rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="Professional, punctual, and did a clean job..."></textarea>
+            </div>
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg text-sm transition">
+                Submit Review & Update Trust Score
+            </button>
+        </form>
+    </div>
+
+    <script type="module">
+        import { supabase } from '../../supabase-client.js';
+
+        window.reviewManager = function() {
+            return {
+                jobId: '',
+                workerId: '',
+                clientId: '',
+                rating: '5',
+                comment: '',
+
+                async submitReview() {
+                    const { error } = await supabase
+                        .from('reviews')
+                        .insert([
+                            {
+                                job_id: this.jobId,
+                                worker_id: this.workerId,
+                                client_id: this.clientId,
+                                rating: parseInt(this.rating),
+                                comment: this.comment
+                            }
+                        ]);
+
+                    if (error) {
+                        alert('Error submitting review: ' + error.message);
+                    } else {
+                        alert('Review submitted successfully! Worker Trust Score updated automatically via trigger[cite: 3].');
+                        this.comment = '';
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

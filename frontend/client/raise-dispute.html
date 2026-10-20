@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillLink - Raise Service Dispute</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-slate-50 flex items-center justify-center min-h-screen py-12">
+
+    <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 max-w-lg w-full space-y-6" 
+         x-data="disputeManager()">
+        <div>
+            <h2 class="text-2xl font-bold text-rose-600">Raise Service Dispute</h2>
+            <p class="text-xs text-slate-500 mt-1">If you experienced an issue, freeze your escrow funds and request admin arbitration[cite: 3].</p>
+        </div>
+
+        <form @submit.prevent="raiseDispute" class="space-y-4">
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Job ID</label>
+                <input type="text" x-model="jobId" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono" placeholder="Paste job UUID">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Reason for Dispute</label>
+                <textarea x-model="disputeReason" required rows="4" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="Describe the structural flaw, incomplete work, or behavioral issue..."></textarea>
+            </div>
+            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-medium py-2.5 rounded-lg text-sm transition shadow-sm">
+                Freeze Escrow & Submit Dispute[cite: 3]
+            </button>
+        </form>
+    </div>
+
+    <script type="module">
+        import { supabase } from '../../supabase-client.js';
+
+        window.disputeManager = function() {
+            return {
+                jobId: '',
+                disputeReason: '',
+
+                async raiseDispute() {
+                    if (!this.jobId || !this.disputeReason) {
+                        alert('Please fill out all fields.');
+                        return;
+                    }
+
+                    // 1. Update Escrow ledger status to DISPUTED and save the dispute reason
+                    const { error: escrowError } = await supabase
+                        .from('escrow_ledger')
+                        .update({ 
+                            status: 'DISPUTED', 
+                            dispute_reason: this.disputeReason 
+                        })
+                        .eq('job_id', this.jobId);
+
+                    // 2. Update job request status to DISPUTED
+                    const { error: jobError } = await supabase
+                        .from('job_requests')
+                        .update({ status: 'DISPUTED' })
+                        .eq('job_id', this.jobId);
+
+                    if (escrowError || jobError) {
+                        alert('Error raising dispute: ' + (escrowError?.message || jobError?.message));
+                    } else {
+                        alert('Dispute successfully submitted! Funds are frozen in escrow for admin review[cite: 3].');
+                        this.jobId = '';
+                        this.disputeReason = '';
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

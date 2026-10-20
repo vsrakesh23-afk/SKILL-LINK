@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillLink - Worker Wallet & Escrow Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-slate-50 min-h-screen py-12 px-4 flex justify-center">
+
+    <div class="max-w-2xl w-full space-y-6" x-data="walletDashboard()">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-900">Worker Financial Dashboard</h2>
+            <p class="text-xs text-slate-500 mt-1">Track your withdrawable wallet balance and live escrow ledger status.</p>
+        </div>
+
+        <!-- Worker ID Input to Load Data -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Enter Your Worker (User) ID</label>
+                <div class="flex gap-2">
+                    <input type="text" x-model="workerId" class="flex-1 border border-slate-300 rounded-lg p-2 text-sm font-mono" placeholder="Paste your UUID">
+                    <button @click="loadWalletData" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-medium transition">
+                        Load Wallet
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wallet & Escrow Summary Cards -->
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-1">
+                <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Withdrawable Wallet Balance</span>
+                <div class="text-3xl font-bold text-emerald-600">₹<span x-text="walletBalance">0.00</span></div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-1">
+                <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Funds Locked in Escrow</span>
+                <div class="text-3xl font-bold text-amber-600">₹<span x-text="escrowHeldTotal">0.00</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase } from '../../supabase-client.js';
+
+        window.walletDashboard = function() {
+            return {
+                workerId: '',
+                walletBalance: '0.00',
+                escrowHeldTotal: '0.00',
+
+                async loadWalletData() {
+                    if (!this.workerId) {
+                        alert('Please enter your worker ID.');
+                        return;
+                    }
+
+                    // 1. Fetch wallet balance from users table
+                    const { data: userData, error: userError } = await supabase
+                        .from('users')
+                        .select('wallet_balance')
+                        .eq('user_id', this.workerId)
+                        .single();
+
+                    if (userError) {
+                        alert('Error fetching wallet balance: ' + userError.message);
+                        return;
+                    }
+
+                    this.walletBalance = userData.wallet_balance ? parseFloat(userData.wallet_balance).toFixed(2) : '0.00';
+
+                    // 2. Fetch sum of HELD escrow for jobs assigned to this worker
+                    const { data: jobData, error: jobError } = await supabase
+                        .from('job_assignments')
+                        .select('job_id')
+                        .eq('worker_id', this.workerId);
+
+                    if (!jobError && jobData && jobData.length > 0) {
+                        const jobIds = jobData.map(j => j.job_id);
+                        
+                        const { data: escrowData, error: escrowError } = await supabase
+                            .from('escrow_ledger')
+                            .select('held_amount')
+                            .in('job_id', jobIds)
+                            .eq('status', 'HELD');
+
+                        if (!escrowError && escrowData) {
+                            const totalHeld = escrowData.reduce((sum, row) => sum + parseFloat(row.held_amount || 0), 0);
+                            this.escrowHeldTotal = totalHeld.toFixed(2);
+                        }
+                    } else {
+                        this.escrowHeldTotal = '0.00';
+                    }
+
+                    alert('Wallet data loaded successfully!');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

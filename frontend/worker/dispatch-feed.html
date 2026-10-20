@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillLink - Emergency Job Feed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-slate-50 flex items-center justify-center min-h-screen py-12">
+
+    <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 max-w-lg w-full space-y-6" 
+         x-data="dispatchFeed()">
+        
+        <div>
+            <h2 class="text-2xl font-bold text-slate-900">Worker Dispatch Feed</h2>
+            <p class="text-xs text-slate-500 mt-1">Claim unassigned emergency jobs instantly.</p>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Your Worker UUID</label>
+                <input type="text" x-model="workerId" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="Paste your worker UUID">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Job Request UUID to Claim</label>
+                <input type="text" x-model="jobId" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="Paste job UUID">
+            </div>
+
+            <button @click="claimJob" class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-lg text-sm transition">
+                ⚡ Claim Emergency Job Now
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase } from '../supabase-client.js';
+
+        window.dispatchFeed = function() {
+            return {
+                workerId: '',
+                jobId: '',
+
+                async claimJob() {
+                    if (!this.workerId || !this.jobId) {
+                        alert('Please fill in both Worker UUID and Job UUID.');
+                        return;
+                    }
+
+                    const { data, error } = await supabase.rpc('claim_emergency_job', {
+                        p_job_id: this.jobId,
+                        p_worker_id: this.workerId
+                    });
+
+                    if (error) {
+                        alert('Claim failed: ' + error.message);
+                    } else if (data === true) {
+                        alert('Success! Job successfully claimed.');
+                    } else {
+                        alert('Job already claimed by another worker or unavailable.');
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

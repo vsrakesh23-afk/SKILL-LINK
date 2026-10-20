@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillLink - Worker Profile Setup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-slate-50 flex items-center justify-center min-h-screen py-12">
+
+    <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 max-w-lg w-full space-y-6" 
+         x-data="workerRegistration()">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-900">Worker Profile Setup</h2>
+            <p class="text-xs text-slate-500 mt-1">Configure your professional trade profile to start receiving local job requests.</p>
+        </div>
+
+        <form @submit.prevent="saveWorkerProfile" class="space-y-4">
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Select User ID (Registered User)</label>
+                <input type="text" x-model="userId" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="Paste your user UUID here">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Professional Bio</label>
+                <textarea x-model="bio" required rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="Experienced electrician with 5+ years in residential wiring..."></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Latitude</label>
+                    <input type="number" step="any" x-model="latitude" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="12.9165">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Longitude</label>
+                    <input type="number" step="any" x-model="longitude" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="79.1325">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Service Radius (KM)</label>
+                    <input type="number" x-model="serviceRadius" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="10">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Availability Status</label>
+                    <select x-model="isAvailable" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white">
+                        <option value="true">Available for Work</option>
+                        <option value="false">Off Duty</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg text-sm transition">
+                Save Worker Profile
+            </button>
+        </form>
+    </div>
+
+    <script type="module">
+        import { supabase } from '../supabase-client.js';
+
+        window.workerRegistration = function() {
+            return {
+                userId: '',
+                bio: '',
+                latitude: '',
+                longitude: '',
+                serviceRadius: 10,
+                isAvailable: 'true',
+                async saveWorkerProfile() {
+                    const { error } = await supabase
+                        .from('workers')
+                        .insert([
+                            {
+                                worker_id: this.userId,
+                                bio: this.bio,
+                                latitude: parseFloat(this.latitude),
+                                longitude: parseFloat(this.longitude),
+                                service_radius_km: parseFloat(this.serviceRadius),
+                                is_available: this.isAvailable === 'true',
+                                verification_tier: 'BASIC'
+                            }
+                        ]);
+
+                    if (error) {
+                        alert('Error saving worker profile: ' + error.message);
+                    } else {
+                        alert('Worker profile successfully created!');
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

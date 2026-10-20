@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillLink - Discover Nearby Workers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-slate-50 flex items-center justify-center min-h-screen py-12">
+
+    <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 max-w-xl w-full space-y-6" 
+         x-data="workerDiscovery()" x-init="fetchSkills()">
+        
+        <div>
+            <h2 class="text-2xl font-bold text-slate-900">Discover Nearby Workers</h2>
+            <p class="text-xs text-slate-500 mt-1">Locate active, verified tradespeople near your location.</p>
+        </div>
+
+        <form @submit.prevent="searchWorkers" class="space-y-4">
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Service Required</label>
+                <select x-model="selectedSkillId" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white">
+                    <option value="" disabled selected>-- Select a Trade --</option>
+                    <template x-for="skill in skills" :key="skill.skill_id">
+                        <option :value="skill.skill_id" x-text="skill.skill_name"></option>
+                    </template>
+                </select>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Your Lat</label>
+                    <input type="number" step="any" x-model="clientLat" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="12.9165">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Your Lon</label>
+                    <input type="number" step="any" x-model="clientLon" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="79.1325">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Radius (KM)</label>
+                    <input type="number" x-model="radiusKm" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="10">
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg text-sm transition">
+                Find Workers
+            </button>
+        </form>
+
+        <!-- Worker Results List -->
+        <div class="space-y-3 pt-4 border-t border-slate-100" x-show="searched">
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Matching Workers (<span x-text="workers.length"></span>)
+            </h3>
+
+            <template x-if="workers.length === 0">
+                <p class="text-sm text-slate-500 italic">No available workers found within this radius.</p>
+            </template>
+
+            <template x-for="w in workers" :key="w.worker_id">
+                <div class="p-4 border border-slate-200 rounded-lg flex items-center justify-between hover:border-indigo-300 transition">
+                    <div>
+                        <h4 class="text-sm font-semibold text-slate-900" x-text="w.full_name"></h4>
+                        <p class="text-xs text-slate-500" x-text="w.phone"></p>
+                    </div>
+                    <div class="text-right">
+                        <span class="inline-block px-2 py-0.5 text-xs font-medium text-indigo-700 bg-indigo-50 rounded" x-text="w.distance_km + ' km away'"></span>
+                        <p class="text-xs text-slate-400 mt-1" x-text="'Trust: ' + w.trust_score"></p>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase } from '../supabase-client.js';
+
+        window.workerDiscovery = function() {
+            return {
+                skills: [],
+                selectedSkillId: '',
+                clientLat: 12.9165,
+                clientLon: 79.1325,
+                radiusKm: 10,
+                workers: [],
+                searched: false,
+
+                async fetchSkills() {
+                    const { data, error } = await supabase.from('skills').select('skill_id, skill_name');
+                    if (!error && data) {
+                        this.skills = data;
+                    }
+                },
+
+                async searchWorkers() {
+                    const { data, error } = await supabase.rpc('discover_nearby_workers', {
+                        p_skill_id: this.selectedSkillId,
+                        p_client_lat: parseFloat(this.clientLat),
+                        p_client_lon: parseFloat(this.clientLon),
+                        p_radius_km: parseFloat(this.radiusKm)
+                    });
+
+                    if (error) {
+                        alert('Error discovering workers: ' + error.message);
+                    } else {
+                        this.workers = data || [];
+                        this.searched = true;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
